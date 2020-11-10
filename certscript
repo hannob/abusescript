@@ -1,0 +1,22 @@
+#!/bin/bash
+
+mkdir cert
+
+for u in $(cat $1|sed -e 's:.* ::g'); do
+	host=$(echo $u|sed -e 's:.*//::g' -e 's:/.*::g')
+
+	ip=$(getent ahostsv4 $host| grep STREAM | head -n 1 | cut -d ' ' -f 1)
+
+	echo == $host $ip
+
+	if [ -n "$ip" ]; then
+		cert=$(curl -s "https://contacts.cert.at/cgi-bin/abuse-nationalcert.pl?ip=$ip&bShowNationalCERT=on"|sed -e 's:.*\t::g')
+		echo $ip $u >> "cert/$cert"
+	fi
+done
+
+mkdir certmails
+for c in $(ls cert/); do
+	sed -e "s:XXXTOXXX:$c:g" certtemplate.txt > certmails/$c
+	cat cert/$c >> certmails/$c
+done

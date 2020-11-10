@@ -1,0 +1,32 @@
+#!/bin/bash
+
+mkdir abuse
+
+for url in $(cat $1 | sed -e 's:.* ::g'); do
+	host=$(echo $url | sed -e 's:.*//::g' -e 's:/.*::g')
+	ip=$(dig -t a +short $host|head -n 1)
+	revip=$(echo $ip | awk 'BEGIN{FS="."}{print $4"."$3"."$2"."$1}')
+
+	abuse=$(dig -t txt +short $revip.abuse-contacts.abusix.org|sed -e 's:"::g')
+
+	if [ -z "$abuse" ]; then
+		abuse=noabuse
+	fi
+
+	echo $host $url $abuse
+
+	echo IP $ip URL $url >> abuse/$abuse
+
+done
+
+mkdir mails
+
+for abuse in $(ls abuse/|grep -v noabuse); do
+	sed -e "s:XXXTOXXX:$abuse:g" template.txt > mails/$abuse
+	cat abuse/$abuse >> mails/$abuse
+done
+
+echo
+echo "Now pass everything in mails to sendmail. Run in mails/ :"
+echo
+echo 'for i in *; do sendmail $i < $i ; done'
